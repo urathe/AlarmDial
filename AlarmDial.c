@@ -1,14 +1,14 @@
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
-#include "pico/stdlib.h"
+#include <string.h>
 #include "pico/bootrom.h"
-#include "hardware/uart.h"
+#include "pico/stdlib.h"
+#include "hardware/flash.h"
 #include "hardware/gpio.h"
 #include "hardware/pio.h"
-#include "hardware/timer.h"
-#include "hardware/flash.h"
 #include "hardware/sync.h"
+#include "hardware/timer.h"
+#include "hardware/uart.h"
 #include "hardware/watchdog.h"
 
 // UART parameters for communication with the modem
@@ -168,7 +168,7 @@ int write_command_with_response_check(char* command, char* target_response, char
   int result;
 
   while ((i++ < repeat) && success) {
-    while (uart_is_readable_within_us(UART_ID,0))
+    while (uart_is_readable_within_us(UART_ID, 0))
       uart_getc(UART_ID);
     write_command(command);
     do {
@@ -202,39 +202,39 @@ void initialise_modem(void) {
 #ifdef DEBUG
   printf("Entering modem initialisation\n");
 #endif
-  result = write_command_with_response_check("ATE0\r", "OK", response, (uint32_t)120000000,3);
+  result = write_command_with_response_check("ATE0\r", "OK", response, (uint32_t)120000000, 3);
 #ifdef DEBUG
   printf("ATE0 returned: %i %s\n", result, response);
 #endif
-  result = write_command_with_response_check("AT&D0\r", "OK", response, (uint32_t)9000000,3);
+  result = write_command_with_response_check("AT&D0\r", "OK", response, (uint32_t)9000000, 3);
 #ifdef DEBUG
   printf("AT&D0 returned: %i %s\n", result, response);
 #endif
-  result = write_command_with_response_check("ATV1\r", "OK", response, (uint32_t)9000000,3);
+  result = write_command_with_response_check("ATV1\r", "OK", response, (uint32_t)9000000, 3);
 #ifdef DEBUG
   printf("ATV1 returned: %i %s\n", result, response);
 #endif
-  result = write_command_with_response_check("AT+CGEREP=0,0;+CVHU=0;+CLIP=0;+CLCC=1\r", "OK", response, (uint32_t)36000000,3);
+  result = write_command_with_response_check("AT+CGEREP=0,0;+CVHU=0;+CLIP=0;+CLCC=1\r", "OK", response, (uint32_t)36000000, 3);
 #ifdef DEBUG
   printf("CGEREP=0,0;CVHU=0;CLIP=0;CLCC=1 returned: %i %s\n", result, response);
 #endif
-  result = write_command_with_response_check("AT+CNMP=2;+CSCS=\"IRA\";+CMGF=1;+CNMI=2,1\r", "OK", response, (uint32_t)36000000,3);
+  result = write_command_with_response_check("AT+CNMP=2;+CSCS=\"IRA\";+CMGF=1;+CNMI=2,1\r", "OK", response, (uint32_t)36000000, 3);
 #ifdef DEBUG
   printf("CNMP=2;CSCS=IRA;CMGF=1;CNMI=2,1 returned: %i %s\n", result, response);
 #endif
-  result = write_command_with_response_check("AT+CPMS=\"SM\",\"SM\",\"SM\"\r", "OK", response, (uint32_t)9000000,3);
+  result = write_command_with_response_check("AT+CPMS=\"SM\",\"SM\",\"SM\"\r", "OK", response, (uint32_t)9000000, 3);
 #ifdef DEBUG
   printf("CPMS=SM,SM,SM returned: %i %s\n", result, response);
 #endif
-  result = write_command_with_response_check("AT+CMGD=0,4\r", "OK", response, (uint32_t)9000000,3);
+  result = write_command_with_response_check("AT+CMGD=0,4\r", "OK", response, (uint32_t)9000000, 3);
 #ifdef DEBUG
   printf("CMGD=0,4 returned: %i %s\n", result, response);
 #endif
-  result = write_command_with_response_check("AT+CPMS=\"ME\",\"ME\",\"ME\"\r", "OK", response, (uint32_t)9000000,3);
+  result = write_command_with_response_check("AT+CPMS=\"ME\",\"ME\",\"ME\"\r", "OK", response, (uint32_t)9000000, 3);
 #ifdef DEBUG
   printf("CPMS=ME,ME,ME returned: %i %s\n", result, response);
 #endif
-  result = write_command_with_response_check("AT+CMGD=0,4\r", "OK", response, (uint32_t)9000000,3);
+  result = write_command_with_response_check("AT+CMGD=0,4\r", "OK", response, (uint32_t)9000000, 3);
 #ifdef DEBUG
   printf("CMGD=0,4 returned: %i %s\n", result, response);
   printf("Exiting modem initialisation\n");
@@ -552,7 +552,7 @@ int main(void) {
     }
     if (received[CPSI] && awaiting_response[CPSI]) {
 #ifdef DEBUG
-      printf("Received CPSI: %s\n",received_response[CPSI]);
+      printf("Received CPSI: %s\n", received_response[CPSI]);
 #endif
       received[CPSI] = false;
       awaiting_response[CPSI] = false;
@@ -598,7 +598,7 @@ int main(void) {
     }
     if (received[CREG] && awaiting_response[CREG]) {
 #ifdef DEBUG
-      printf("Received CREG: %s\n",received_response[CREG]);
+      printf("Received CREG: %s\n", received_response[CREG]);
 #endif
       received[CREG] = false;
       awaiting_response[CREG] = false;
@@ -616,7 +616,7 @@ int main(void) {
 // process CMTI (modem signalling incoming SMS)
     if (received[CMTI] && !awaiting_response[UNKNOWN]) {
 #ifdef DEBUG
-      printf("Received CMTI: %s\n",received_response[CMTI]);
+      printf("Received CMTI: %s\n", received_response[CMTI]);
 #endif
       received[CMTI] = false;
 // we want to process the SMS, so need to read it out from the modem first
@@ -630,7 +630,7 @@ int main(void) {
 // process CLCC (modem signalling incoming voice call)
     if (received[CLCC] && !awaiting_response[UNKNOWN]) {
 #ifdef DEBUG
-      printf("Received CLCC: %s\n",received_response[CLCC]);
+      printf("Received CLCC: %s\n", received_response[CLCC]);
 #endif
       received[CLCC] = false;
 // hang up call
@@ -646,7 +646,7 @@ int main(void) {
 // process CMGR (SMS read-out from modem)
     if (received[CMGR] && awaiting_response[CMGR] && received_sms) {
 #ifdef DEBUG
-      printf("Received CMGR: %s\n",received_response[CMGR]);
+      printf("Received CMGR: %s\n", received_response[CMGR]);
 #endif
       received[CMGR] = false;
       awaiting_response[CMGR] = false;
@@ -737,7 +737,7 @@ int main(void) {
 // we need to wait for the OK from the modem first before we can respond to the request, so signal to the OK processing
         multi_stage_handling_type = MULTI_STAGE_RECEIVED_PIN_ACTION;
         i = received_sms_text[j] - '1';
-        if ((i >=0) && (i < GPIO_NUMBER_PINS) && received_sms_text[j+1] == '\0') {
+        if ((i >= 0) && (i < GPIO_NUMBER_PINS) && (received_sms_text[j+1] == '\0')) {
 #ifdef DEBUG
           printf("Changing action on input change of pin: %1d\n", i);
 #endif
@@ -772,7 +772,7 @@ int main(void) {
           l = 2;
         if (received_sms_text[j+1] != '!')
           l = 0;
-        if ((k >=0) && (k < GPIO_NUMBER_PINS) && l) {
+        if ((k >= 0) && (k < GPIO_NUMBER_PINS) && l) {
           if (l == 1) {
             strncpy(sms_on_fall[k], &received_sms_text[j+5], sizeof(sms_on_fall[k])-1);
 #ifdef DEBUG
@@ -821,6 +821,8 @@ int main(void) {
         store_new_flash_settings = true;
         recognised_instruction = false;
       }
+
+// we received the correct password but no recognised instruction, so send a response to that
       if (recognised_instruction) {
 #ifdef DEBUG
         printf("Received correct password but no valid instruction: %s\n", received_sms_text);
@@ -831,15 +833,21 @@ int main(void) {
       }
     } else if (received[CMGR] && !awaiting_response[CMGR]) {
       received[CMGR] = false;
+      received_sms = false;
 #ifdef DEBUG
       printf("Received unexpected CMGR\n");
+#endif
+    } else if (!awaiting_response[CMGR] && received_sms) {
+      received_sms = false;
+#ifdef DEBUG
+      printf("Received unexpected SMS\n");
 #endif
     }
 
 // process CSQ (readout of signal level from modem)
     if (received[CSQ] && awaiting_response[CSQ]) {
 #ifdef DEBUG
-      printf("Received CSQ: %s\n",received_response[CSQ]);
+      printf("Received CSQ: %s\n", received_response[CSQ]);
 #endif
       received[CSQ] = false;
       awaiting_response[CSQ] = false;
@@ -876,7 +884,7 @@ int main(void) {
 // process CMGS (modem response to sending SMS)
     if (received[CMGS] && awaiting_response[CMGS]) {
 #ifdef DEBUG
-      printf("Received CMGS: %s\n",received_response[CMGS]);
+      printf("Received CMGS: %s\n", received_response[CMGS]);
 #endif
       received[CMGS] = false;
       awaiting_response[CMGS] = false;
@@ -929,7 +937,7 @@ int main(void) {
 // process unknown modem message
     if (received[UNKNOWN] && !awaiting_response[UNKNOWN]) {
 #ifdef DEBUG
-      printf("Received unknown modem message: %s\n",received_response[UNKNOWN]);
+      printf("Received unknown modem message: %s\n", received_response[UNKNOWN]);
 #endif
       received[UNKNOWN] = false;
 // receiving such an SMS will be confusing for the general user, uncomment following five lines only if you can interpret such an SMS
@@ -941,7 +949,7 @@ int main(void) {
     }
 
 // check for timeouts
-    for (i = 1; i < MAX_MSG-1; i++) {
+    for (i = 0; i < MAX_MSG-1; i++) {
       if ((absolute_time_diff_us(initiate_time[i], current_time) > ((i == OK) ? (int64_t)60000000 : (int64_t)9000000)) && \
           awaiting_response[i]) {
 #ifdef DEBUG
@@ -979,7 +987,7 @@ int main(void) {
       if (!gpio_get(GPIO_PIN_PW_RESET)) {
         last_passw_reset_time = current_time;
 #ifdef DEBUG
-        printf("Password reset triggered by GPIO %i\n",GPIO_PIN_PW_RESET);
+        printf("Password reset triggered by GPIO %i\n", GPIO_PIN_PW_RESET);
 #endif
         strcpy(passw, default_passw);
         store_new_flash_settings = true;

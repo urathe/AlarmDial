@@ -3,7 +3,11 @@ AlarmDial is a 4G/LTE-capable alarm dialler. The device sends notifications via 
 
 ![Function diagram of AlarmDial](images/function_diagram.png)
 
-The hardware is based on a Raspberry Pi Pico with a 4G modem HAT, and some simple electronics for power and converting inputs level.
+The project came about because PSTN landlines are being phased out in the UK. This makes fixed-line alarm diallers obsolete. I prefer to be informed about alarm events by text since that is fairly immediate and involves no intermediary other than the mobile network operator, unlike app-based solutions.
+
+Alarm diallers using the mobile network are available to purchase, but building one seemed more interesting. I have not done much with embedded controllers but always wanted to. So here was an opportunity to explore embedded computing while building something that is actually useful.
+
+The hardware is based on a Raspberry Pi Pico with a 4G modem HAT, and some simple electronics for power and converting inputs level. The modem is the cheapest 4G-capable model I could find.
 
 ![Photo of AlarmDial hardware](images/hw_overview.jpg)
 
@@ -114,8 +118,9 @@ None of these changes are strictly necessary. The code should work without any c
 Compiling the code requires the Pico SDK to be installed.
 * Create a new project directory
 * Copy `pico_sdk_import.cmake` from the SDK `external` directory into the project directory, as well as `AlarmDial.c` and `CMakeLists.txt` from the GitHub repository
-* Create a subdirectory build in the project directory
-* Change into build
+* Adjust line 10 in `CMakeLists.txt` to the directory of the SDK
+* Create a subdirectory `build` in the project directory
+* Change into `build`
 * Run `cmake ..`
 * Run `make`
 

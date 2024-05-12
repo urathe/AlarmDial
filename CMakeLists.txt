@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 # Initialise pico_sdk from installed location
 # (note this can come from environment, CMake cache etc)
-set(PICO_SDK_PATH "/home/ulrich/pico/pico-sdk")
+set(PICO_SDK_PATH "~/pico/pico-sdk")
 
 set(PICO_BOARD pico CACHE STRING "Board type")
 
@@ -28,7 +28,7 @@ pico_sdk_init()
 add_executable(AlarmDial AlarmDial.c )
 
 pico_set_program_name(AlarmDial "AlarmDial")
-pico_set_program_version(AlarmDial "1.0")
+pico_set_program_version(AlarmDial "1.1")
 
 pico_enable_stdio_uart(AlarmDial 0)
 pico_enable_stdio_usb(AlarmDial 1)
