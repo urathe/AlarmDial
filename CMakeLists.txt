@@ -28,7 +28,7 @@ pico_sdk_init()
 add_executable(AlarmDial AlarmDial.c )
 
 pico_set_program_name(AlarmDial "AlarmDial")
-pico_set_program_version(AlarmDial "1.2")
+pico_set_program_version(AlarmDial "1.3")
 
 pico_enable_stdio_uart(AlarmDial 0)
 pico_enable_stdio_usb(AlarmDial 1)

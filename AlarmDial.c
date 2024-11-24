@@ -351,11 +351,11 @@ int main(void) {
 #endif
   flash_target_contents = (uint8_t *) (XIP_BASE + FLASH_TARGET_OFFSET);
   memcpy(flash_settings, flash_target_contents, FLASH_SETTINGS_BYTES);
-  checksum = 0;
+  checksum = 127;
   for (i = 1; i < FLASH_SETTINGS_BYTES; i++)
     checksum = checksum + flash_settings[i];
 // uncomment following line to force saving (new) defaults, run once, then comment out again
-//    checksum = 0;
+//    checksum = flash_settings[0] + 1;
   if (checksum != flash_settings[0]) {
 #ifdef DEBUG
     printf("Flash configuration checksum mismatch, will save defaults\n");
@@ -850,7 +850,7 @@ int main(void) {
 #ifdef DEBUG
         printf("Received correct password but no valid instruction: %s\n", received_sms_text);
 #endif
-// we need to wait for the UK from the modem first before we can respond to the request
+// we need to wait for the OK from the modem first before we can respond to the request
         multi_stage_handling_type = MULTI_STAGE_INVALID_COMMAND;
         sprintf(multi_stage_message[MULTI_STAGE_INVALID_COMMAND], "Invalid instruction");
       }
@@ -1059,7 +1059,7 @@ int main(void) {
       }
       for (i = 0; i < GPIO_NUMBER_PINS; i++)
         flash_settings[l++] = send_sms_on_change[i];
-      checksum = 0;
+      checksum = 127;
       for (i = 1; i < FLASH_SETTINGS_BYTES; i++)
         checksum = checksum + flash_settings[i];
       flash_settings[0] = checksum;
