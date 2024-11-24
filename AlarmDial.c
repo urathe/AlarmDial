@@ -52,10 +52,10 @@
 #define CREG_CHECK_INTERVAL_US 28800000000
 //#define CREG_CHECK_INTERVAL_US 30000000
 
-// CMGD incoming SMS buffer deletion
+// modem config reiteration
 // 86400 sec is 24 hours
-#define CMGD_INTERVAL_US 86400000000
-//#define CMGD_INTERVAL_US 45000000
+#define MODEM_CONFIG_REITERATION_INTERVAL_US 86400000000
+//#define MODEM_CONFIG_REITERATION_INTERVAL_US 45000000
 
 // maps incoming modem message strings into numerical values
 #define OK      0
@@ -69,8 +69,9 @@
 #define CMTI    8
 #define CMGR    9
 #define CLCC    10
-#define UNKNOWN 11
-#define MAX_MSG 12
+#define CGEV    11
+#define UNKNOWN 12
+#define MAX_MSG 13
 
 #ifdef DEBUG
 const char* const command_code_map[MAX_MSG] = { "OK",    \
@@ -84,6 +85,7 @@ const char* const command_code_map[MAX_MSG] = { "OK",    \
                                                 "CMTI",  \
                                                 "CMGR",  \
                                                 "CLCC",  \
+                                                "CGEV",  \
                                                 "UNKNOWN" };
 #endif
 
@@ -261,6 +263,7 @@ int main(void) {
   char received_response[MAX_MSG][max_str_l];
   char received_sms_text[max_str_l];
   bool recognised_instruction;
+  int unknown_message_count = 0;
 
 // variables relating to GPIO input pins (alarm system connections)
   bool last_status[GPIO_NUMBER_PINS] = { false, false, false };
@@ -274,8 +277,8 @@ int main(void) {
   bool awaiting_response[MAX_MSG];
   bool received_sms = false;
 
-// variables storing event times to control timeouts
-  absolute_time_t current_time, last_creg_check_time, last_cpsi_check_time, last_cmgd_time;
+// variables storing event times to control regular actions and timeouts
+  absolute_time_t current_time, last_creg_check_time, last_cpsi_check_time, last_modem_config_reiteration_time;
   absolute_time_t initiate_time[MAX_MSG];
 
 // variables relating to interrupt control
@@ -422,7 +425,7 @@ int main(void) {
   last_led_switch_time = current_time;
   last_creg_check_time = current_time;
   last_cpsi_check_time = current_time;
-  last_cmgd_time = current_time;
+  last_modem_config_reiteration_time = current_time;
 
 // initialise incoming modem message and action flags
   for (i = 0; i < MAX_MSG; i++) {
@@ -510,6 +513,10 @@ int main(void) {
         else if (!strncmp(str, "+CLCC", 5)) {
           received[CLCC] = true;
           strcpy(received_response[CLCC], str);
+        }
+        else if (!strncmp(str, "+CGEV", 5)) {
+          received[CGEV] = true;
+          strcpy(received_response[CGEV], str);
         }
         else if (str[0] == '>')
           ;
@@ -638,6 +645,22 @@ int main(void) {
       printf("Hanging up\n");
 #endif
       write_command("AT+CHUP\r");
+      initiate_time[OK] = current_time;
+      awaiting_response[OK] = true;
+      awaiting_response[UNKNOWN] = true;
+    }
+
+// process CGEV (modem is signalling network events even though it shouldn't)
+    if (received[CGEV] && !awaiting_response[UNKNOWN]) {
+#ifdef DEBUG
+      printf("Received CGEV: %s\n", received_response[CGEV]);
+#endif
+      received[CGEV] = false;
+// reset modem configuration
+#ifdef DEBUG
+      printf("Resetting modem configuration\n");
+#endif
+      write_command("ATE0&D0V1;+CGEREP=0,0;+CVHU=0;+CLIP=0;+CLCC=1;+CNMP=2;+CSCS=\"IRA\";+CMGF=1;+CNMI=2,1;+CMGD=0,4\r");
       initiate_time[OK] = current_time;
       awaiting_response[OK] = true;
       awaiting_response[UNKNOWN] = true;
@@ -869,16 +892,17 @@ int main(void) {
 #endif
     }
 
-// regular message deletion
-    if ((absolute_time_diff_us(last_cmgd_time, current_time) > (int64_t)CMGD_INTERVAL_US) && !awaiting_response[UNKNOWN]) {
+// regular modem configuration reiteration
+    if ((absolute_time_diff_us(last_modem_config_reiteration_time, current_time) > (int64_t)MODEM_CONFIG_REITERATION_INTERVAL_US) && !awaiting_response[UNKNOWN]) {
 #ifdef DEBUG
-      printf("Initiate regular message deletion\n");
+      printf("Initiate regular modem config reiteration\n");
 #endif
-      write_command("AT+CMGD=0,4\r");
+      write_command("ATE0&D0V1;+CGEREP=0,0;+CVHU=0;+CLIP=0;+CLCC=1;+CNMP=2;+CSCS=\"IRA\";+CMGF=1;+CNMI=2,1;+CMGD=0,4\r");
       initiate_time[OK] = current_time;
       awaiting_response[OK] = true;
       awaiting_response[UNKNOWN] = true;
-      last_cmgd_time = current_time;
+      last_modem_config_reiteration_time = current_time;
+      unknown_message_count = 0;
     }
 
 // process CMGS (modem response to sending SMS)
@@ -940,12 +964,15 @@ int main(void) {
       printf("Received unknown modem message: %s\n", received_response[UNKNOWN]);
 #endif
       received[UNKNOWN] = false;
+// avoid sending SMS flood in case of unknown message flood
+      if (unknown_message_count++ < 5) {
 // receiving such an SMS will be confusing for the general user, uncomment following five lines only if you can interpret such an SMS
-//      sprintf(str, "Unknown modem message: %s", received_response[UNKNOWN]);
-//      send_sms(tel_no, str);
-//      initiate_time[CMGS] = current_time;
-//      awaiting_response[CMGS] = true;
-//      awaiting_response[UNKNOWN] = true;
+//        sprintf(str, "Unknown modem message: %s", received_response[UNKNOWN]);
+//        send_sms(tel_no, str);
+//        initiate_time[CMGS] = current_time;
+//        awaiting_response[CMGS] = true;
+//        awaiting_response[UNKNOWN] = true;
+      }
     }
 
 // check for timeouts
