@@ -36,6 +36,7 @@
 // what GPIO pins to use to interface with the alarm system
 #define GPIO_PIN_FIRST 2
 #define GPIO_NUMBER_PINS 3
+#define GPIO_PIN_MODEM_RESET 6
 
 // GPIO pin for configuration reset
 #define GPIO_PIN_PW_RESET 5
@@ -43,8 +44,10 @@
 // time intervals for regular actions
 
 // CPSI modem status check
+// 86400 sec is 24 hours
+#define CPSI_CHECK_INTERVAL_US 86400000000
 // 2419200 sec is four weeks
-#define CPSI_CHECK_INTERVAL_US 2419200000000
+#define CPSI_CHECK_MSG_INTERVAL_US 2419200000000
 //#define CPSI_CHECK_INTERVAL_US 120000000
 
 // CREG network registration check
@@ -278,7 +281,7 @@ int main(void) {
   bool received_sms = false;
 
 // variables storing event times to control regular actions and timeouts
-  absolute_time_t current_time, last_creg_check_time, last_cpsi_check_time, last_modem_config_reiteration_time;
+  absolute_time_t current_time, last_creg_check_time, last_cpsi_check_time, last_cpsi_check_msg_time, last_modem_config_reiteration_time;
   absolute_time_t initiate_time[MAX_MSG];
 
 // variables relating to interrupt control
@@ -344,6 +347,11 @@ int main(void) {
   gpio_init(GPIO_PIN_PW_RESET);
   gpio_set_dir(GPIO_PIN_PW_RESET, GPIO_IN);
   gpio_pull_up(GPIO_PIN_PW_RESET);
+
+// configure GPIO pin for modem reset
+  gpio_init(GPIO_PIN_MODEM_RESET);
+  gpio_set_dir(GPIO_PIN_MODEM_RESET, GPIO_OUT);
+  gpio_put(GPIO_PIN_MODEM_RESET, 1);
 
 // restore settings from flash, if not available schedule storage of defaults
 #ifdef DEBUG
@@ -412,8 +420,13 @@ int main(void) {
 #ifdef DEBUG
   printf("Reboot the modem, sleep a bit, then initialise modem\n");
 #endif
-  sleep_ms(10000);
-  write_command("AT+CRESET\r");
+// power cycle the modem - we might have arrived here after a watchdog reset
+  for (i = 0; i < 2; i++) {
+    sleep_ms(15000);
+    gpio_put(GPIO_PIN_MODEM_RESET, 0);
+    sleep_ms(1000);
+    gpio_put(GPIO_PIN_MODEM_RESET, 1);
+  }
   sleep_ms(30000);
   initialise_modem();
 
@@ -425,6 +438,7 @@ int main(void) {
   last_led_switch_time = current_time;
   last_creg_check_time = current_time;
   last_cpsi_check_time = current_time;
+  last_cpsi_check_msg_time = current_time;
   last_modem_config_reiteration_time = current_time;
 
 // initialise incoming modem message and action flags
@@ -564,12 +578,15 @@ int main(void) {
       received[CPSI] = false;
       awaiting_response[CPSI] = false;
       if (strstr(received_response[CPSI], "Online") != NULL) {
-// if the modem is online, send a status message via SMS
-        sprintf(multi_stage_message[MULTI_STAGE_SEND_STATUS_MSG], "Modem check: %s", &received_response[CPSI][7]);
-        multi_stage_handling_type = MULTI_STAGE_SEND_STATUS_MSG;
-        initiate_time[OK] = current_time;
-        awaiting_response[OK] = true;
-        awaiting_response[UNKNOWN] = true;
+// if the modem is online and a status message is due, send the message via SMS - otherwise move on without doing anything else
+        if (absolute_time_diff_us(last_cpsi_check_msg_time, current_time) > (int64_t)CPSI_CHECK_MSG_INTERVAL_US) {
+          last_cpsi_check_msg_time = current_time;
+          sprintf(multi_stage_message[MULTI_STAGE_SEND_STATUS_MSG], "Modem check: %s", &received_response[CPSI][7]);
+          multi_stage_handling_type = MULTI_STAGE_SEND_STATUS_MSG;
+          initiate_time[OK] = current_time;
+          awaiting_response[OK] = true;
+          awaiting_response[UNKNOWN] = true;
+        }
       }
       else {
 // if the modem is not online, reboot (modem is reset upon boot)

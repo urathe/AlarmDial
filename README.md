@@ -106,12 +106,14 @@ The steps for this modem preparation under Linux are
 
 This sets the modem serial interface speed permanently to 9600 Baud. There are several reasons why this speed makes sense. It is not possible to leave the modem’s serial interface at its default speed (115200 Baud) and instead change the serial speed in the Pico’s source code to 115200 Baud. That will not work without more extensive changes to the code.
 
+Next, the modem needs to jumpered to enable power cycling by the Raspberry Pico. The jumper connecting `PWR` to `3V3` (the factory setting) needs to be changed to connect `PWR` to `P4`.
+
 ## Adapt and compile software
 
 The source code is written in C. First adapt the program as required, particularly:
-* Set the default telephone number to something sensible in the country of operation. Source code line 293.
-* Set the time interval beween sending network status message (by default, four weeks). Source code line 47. Note this is in microseconds.
-* Implement some sense checks on new telephone numbers. The current checks for UK mobile numbers are commented out because they would prevent setting a perfectly acceptable German mobile number, for example. Code lines 683-684 and 691-698.
+* Set the default telephone number to something sensible in the country of operation. Source code line 298.
+* Set the time interval beween sending network status message (by default, four weeks). Source code line 50. Note this is in microseconds.
+* Implement some sense checks on new telephone numbers. The current checks for UK mobile numbers are commented out because they would prevent setting a perfectly acceptable German mobile number, for example. Code lines 723-724 and 731-738.
 
 None of these changes are strictly necessary. The code should work without any changes.
 
